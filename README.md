@@ -34,3 +34,9 @@ PixTown Assistant 是一個輕量、強大的前端圖片處理工具，旨在�
 
 ---
 Made with ❤️ for the Heartopia community.
+
+
+## ☕ 支持我 (Support)
+如果你覺得這個工具有幫助，可以請我喝杯咖啡！
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/shenlyway)
