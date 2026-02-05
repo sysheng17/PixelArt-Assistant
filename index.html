@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心動小鎮畫作助手 - 國際版</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <style>
+        :root { --primary: #6366f1; --success: #10b981; --bg: #f8fafc; --reset: #94a3b8; --danger: #f43f5e; }
+        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); padding: 20px; color: #1e293b; }
+        .container { max-width: 1100px; margin: 0 auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); position: relative; }
+        
+        /* 語言切換按鈕 */
+        .lang-switch { position: absolute; top: 20px; right: 25px; }
+        .lang-btn { background: #e2e8f0; padding: 5px 12px; border-radius: 15px; font-weight: bold; font-size: 0.8rem; border: 2px solid transparent; }
+        .lang-btn.active { border-color: var(--primary); background: #fff; color: var(--primary); }
+
+        .edit-layout { display: grid; grid-template-columns: 1fr 380px; gap: 25px; margin-top: 20px; }
+        @media (max-width: 900px) { .edit-layout { grid-template-columns: 1fr; } }
+
+        .img-container { max-height: 400px; background: #000; border-radius: 12px; overflow: hidden; margin-bottom: 15px; }
+        #imageToCrop { max-width: 100%; }
+
+        .canvas-area { background: #e2e8f0; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 20px; min-height: 500px; overflow: auto; }
+        canvas { image-rendering: pixelated; background: white; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+
+        .panel { display: flex; flex-direction: column; gap: 15px; }
+        .group { border: 1px solid #e2e8f0; padding: 15px; border-radius: 12px; background: #fff; }
+        h3 { font-size: 0.85rem; margin: 0 0 10px 0; color: #64748b; border-left: 4px solid var(--primary); padding-left: 10px; }
+
+        .grid-matrix { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 10px; }
+        .ratio-tag { grid-column: span 4; font-size: 0.7rem; font-weight: bold; color: var(--primary); background: #f1f5f9; padding: 2px 8px; border-radius: 4px; margin-top: 5px; }
+        
+        button { cursor: pointer; border: none; padding: 6px 4px; border-radius: 4px; font-size: 0.75rem; background: #f1f5f9; transition: 0.2s; }
+        button:hover { background: #e2e8f0; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-success { background: var(--success); color: white; width: 100%; padding: 12px; font-weight: bold; margin-bottom: 8px; border-radius: 8px; }
+        .btn-reset { background: var(--reset); color: white; width: 100%; margin-top: 5px; }
+
+        .custom-input { display: flex; align-items: center; gap: 5px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e2e8f0; }
+        input[type="number"] { width: 60px; padding: 5px; border: 1px solid #cbd5e1; border-radius: 4px; }
+        
+        #limitWarning { color: var(--danger); font-size: 0.75rem; font-weight: bold; margin-top: 5px; height: 18px; opacity: 0; transition: opacity 0.3s; }
+        .hint { font-size: 0.7rem; color: #94a3b8; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="lang-switch">
+        <button class="lang-btn active" onclick="switchLang('zh')">中文</button>
+        <button class="lang-btn" onclick="switchLang('en')">EN</button>
+    </div>
+
+    <h2 id="ui-title" style="text-align:center;">🎨 心動小鎮畫作助手</h2>
+
+    <div id="step1">
+        <div style="text-align: center; border: 2px dashed #cbd5e1; padding: 30px; border-radius: 12px; margin-bottom: 20px;">
+            <input type="file" id="upload" accept="image/*">
+        </div>
+        <div class="img-container"><img id="imageToCrop"></div>
+        <div id="cropControls" style="display:none; text-align:center;">
+            <div style="margin-bottom:15px; display:flex; gap:5px; justify-content:center; flex-wrap:wrap;">
+                <button onclick="setRatio(16/9)">16:9</button>
+                <button onclick="setRatio(4/3)">4:3</button>
+                <button onclick="setRatio(1/1)">1:1</button>
+                <button onclick="setRatio(3/4)">3:4</button>
+                <button onclick="setRatio(9/16)">9:16</button>
+            </div>
+            <button class="btn-primary" id="ui-confirm-crop" style="padding:10px 50px; border-radius:20px;" onclick="confirmCrop()">確認剪裁</button>
+        </div>
+    </div>
+
+    <div id="step2" class="edit-layout" style="display:none;">
+        <div class="canvas-area">
+            <canvas id="mainCanvas"></canvas>
+        </div>
+
+        <div class="panel">
+            <div class="group">
+                <h3 id="ui-h-size">1. 常用尺寸</h3>
+                <div class="grid-matrix">
+                    <div class="ratio-tag">16 : 9</div>
+                    <button onclick="safeMosaic(30,18)">30x18</button><button onclick="safeMosaic(50,28)">50x28</button>
+                    <button onclick="safeMosaic(100,56)">100x56</button><button onclick="safeMosaic(150,84)">150x84</button>
+                    <div class="ratio-tag">4 : 3</div>
+                    <button onclick="safeMosaic(30,24)">30x24</button><button onclick="safeMosaic(50,38)">50x38</button>
+                    <button onclick="safeMosaic(100,76)">100x76</button><button onclick="safeMosaic(150,114)">150x114</button>
+                    <div class="ratio-tag">1 : 1</div>
+                    <button onclick="safeMosaic(30,30)">30x30</button><button onclick="safeMosaic(50,50)">50x50</button>
+                    <button onclick="safeMosaic(100,100)">100x100</button><button onclick="safeMosaic(150,150)">150x150</button>
+                    <div class="ratio-tag">3 : 4</div>
+                    <button onclick="safeMosaic(24,30)">24x30</button><button onclick="safeMosaic(38,50)">38x50</button>
+                    <button onclick="safeMosaic(76,100)">76x100</button><button onclick="safeMosaic(114,150)">114x150</button>
+                    <div class="ratio-tag">9 : 16</div>
+                    <button onclick="safeMosaic(18,30)">18x30</button><button onclick="safeMosaic(28,50)">28x50</button>
+                    <button onclick="safeMosaic(56,100)">56x100</button><button onclick="safeMosaic(84,150)">84x150</button>
+                </div>
+                <div class="custom-input">
+                    <input type="number" id="customW" placeholder="W"> × <input type="number" id="customH" placeholder="H">
+                    <button class="btn-primary" id="ui-apply-btn" onclick="applyCustom()">套用</button>
+                </div>
+                <div id="limitWarning">⚠️ 已自動修正為原圖尺寸上限</div>
+                <div id="maxHint" class="hint"></div>
+                <label style="font-size:0.8rem; margin-top:10px; display:block;"><input type="checkbox" id="showGrid" onchange="render()" checked> <span id="ui-grid-label">顯示參考網格</span></label>
+            </div>
+
+            <div class="group">
+                <h3 id="ui-h-color">2. 色彩處理模式</h3>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                    <button class="btn-primary" style="grid-column: span 2;" id="ui-town-direct" onclick="applyPalette('town', false)">小鎮 125色 (直接)</button>
+                    <button class="btn-primary" style="grid-column: span 2;" id="ui-town-dither" onclick="applyPalette('town', true)">小鎮 125色 (抖動)</button>
+                    <button onclick="applyPalette('256', false)" id="ui-256">標準 256 色</button>
+                    <button onclick="applyPalette('16', false)" id="ui-16">復古 16 色</button>
+                    <button class="btn-reset" style="grid-column: span 2;" id="ui-reset-btn" onclick="resetColors()">🔄 重置原始色彩</button>
+                </div>
+            </div>
+
+            <div class="group">
+                <h3 id="ui-h-export">3. 導出</h3>
+                <button class="btn-success" id="ui-dl-pure" onclick="downloadImage(false)">💾 下載純淨像素圖</button>
+                <button class="btn-success" style="background:#64748b;" id="ui-dl-grid" onclick="downloadImage(true)">📏 下載帶網格參考圖</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<script>
+    // 語言資源
+    const i18n = {
+        zh: {
+            title: "🎨 心動小鎮畫作助手",
+            confirmCrop: "確認剪裁",
+            hSize: "1. 常用尺寸",
+            apply: "套用",
+            limit: "⚠️ 已自動修正為原圖尺寸上限",
+            maxHint: "* 原圖像素極限: ",
+            grid: "顯示參考網格",
+            hColor: "2. 色彩處理模式",
+            townDirect: "小鎮 125色 (直接)",
+            townDither: "小鎮 125色 (抖動)",
+            c256: "標準 256 色",
+            c16: "復古 16 色",
+            reset: "🔄 重置原始色彩",
+            hExport: "3. 導出",
+            dlPure: "💾 下載純淨像素圖",
+            dlGrid: "📏 下載帶網格參考圖"
+        },
+        en: {
+            title: "🎨 Town Art Assistant",
+            confirmCrop: "Confirm Crop",
+            hSize: "1. Common Sizes",
+            apply: "Apply",
+            limit: "⚠️ Limited to original image size",
+            maxHint: "* Original Limit: ",
+            grid: "Show Grid Lines",
+            hColor: "2. Color Processing",
+            townDirect: "Town 125 (Direct)",
+            townDither: "Town 125 (Dither)",
+            c256: "Web 256 Color",
+            c16: "Retro 16 Color",
+            reset: "🔄 Reset to Original",
+            hExport: "3. Export",
+            dlPure: "💾 Download Pixel Art",
+            dlGrid: "📏 Download with Grid"
+        }
+    };
+
+    let currentLang = 'zh';
+
+    function switchLang(lang) {
+        currentLang = lang;
+        document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        const t = i18n[lang];
+        document.getElementById('ui-title').innerText = t.title;
+        document.getElementById('ui-confirm-crop').innerText = t.confirmCrop;
+        document.getElementById('ui-h-size').innerText = t.hSize;
+        document.getElementById('ui-apply-btn').innerText = t.apply;
+        document.getElementById('limitWarning').innerText = t.limit;
+        document.getElementById('ui-grid-label').innerText = t.grid;
+        document.getElementById('ui-h-color').innerText = t.hColor;
+        document.getElementById('ui-town-direct').innerText = t.townDirect;
+        document.getElementById('ui-town-dither').innerText = t.townDither;
+        document.getElementById('ui-256').innerText = t.c256;
+        document.getElementById('ui-16').innerText = t.c16;
+        document.getElementById('ui-reset-btn').innerText = t.reset;
+        document.getElementById('ui-h-export').innerText = t.hExport;
+        document.getElementById('ui-dl-pure').innerText = t.dlPure;
+        document.getElementById('ui-dl-grid').innerText = t.dlGrid;
+        
+        // 更新極限提示文字
+        if (croppedCanvas) {
+            document.getElementById('maxHint').innerText = `${t.maxHint}${croppedCanvas.width}x${croppedCanvas.height}`;
+        }
+    }
+
+    const TOWN_PALETTE = [[20,20,20],[68,68,68],[115,115,115],[163,163,163],[250,250,250],[100,28,38],[160,35,52],[210,45,65],[235,95,110],[245,160,170],[115,45,40],[170,55,45],[215,85,55],[240,135,110],[245,185,170],[115,70,35],[175,95,40],[235,135,40],[250,180,95],[250,210,160],[115,90,30],[180,135,40],[245,185,45],[250,210,105],[250,230,170],[110,105,35],[170,165,45],[235,225,50],[245,235,115],[250,245,180],[95,110,30],[145,170,40],[205,230,55],[225,240,125],[240,245,185],[45,105,50],[65,165,80],[100,225,115],[155,240,165],[205,250,210],[30,100,85],[45,160,140],[75,220,195],[140,235,220],[195,250,240],[35,95,110],[50,150,175],[80,205,235],[145,225,245],[200,245,250],[35,75,115],[50,115,180],[85,165,240],[150,205,250],[205,235,255],[40,60,115],[60,90,185],[100,135,245],[160,185,255],[210,225,255],[65,55,115],[100,85,185],[145,125,245],[190,180,255],[225,220,255],[90,50,110],[140,80,175],[195,120,235],[220,175,245],[240,220,250],[105,40,85],[165,65,135],[225,105,185],[240,165,215],[250,210,235],[85,75,70],[110,95,90],[145,125,120],[185,165,160],[220,205,200],[85,80,65],[110,105,85],[140,135,115],[180,175,155],[215,210,195],[75,85,65],[95,110,85],[125,140,110],[165,180,150],[205,215,190],[65,85,75],[85,110,95],[115,145,125],[155,185,165],[195,215,205],[65,80,85],[85,105,110],[115,135,145],[155,175,185],[195,210,220],[65,70,85],[85,90,110],[115,125,145],[155,165,185],[195,205,220],[75,65,85],[95,85,110],[130,115,145],[170,155,185],[205,195,220],[85,65,80],[110,85,105],[145,115,135],[185,155,175],[220,195,210],[85,65,70],[110,85,90],[145,115,120],[185,155,160],[220,195,200],[50,50,50],[80,80,80],[110,110,110],[150,150,150],[200,200,200]];
+    const PALETTE_16 = [[0,0,0],[255,255,255],[255,0,0],[0,255,0],[0,0,255],[255,255,0],[0,255,255],[255,0,255],[192,192,192],[128,128,128],[128,0,0],[128,128,0],[0,128,0],[128,0,128],[0,128,128],[0,0,128]];
+
+    let cropper, croppedCanvas, smallCanvasData, originalPixelData, warningTimer;
+    const canvas = document.getElementById('mainCanvas'), ctx = canvas.getContext('2d');
+
+    document.getElementById('upload').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const img = document.getElementById('imageToCrop');
+            img.src = ev.target.result;
+            if (cropper) cropper.destroy();
+            document.getElementById('cropControls').style.display = 'block';
+            cropper = new Cropper(img, { viewMode: 1, aspectRatio: 16/9 });
+        };
+        reader.readAsDataURL(file);
+    });
+
+    function setRatio(r) { cropper.setAspectRatio(r); }
+
+    function confirmCrop() {
+        croppedCanvas = cropper.getCroppedCanvas();
+        document.getElementById('step1').style.display = 'none';
+        document.getElementById('step2').style.display = 'grid';
+        const t = i18n[currentLang];
+        document.getElementById('maxHint').innerText = `${t.maxHint}${croppedCanvas.width}x${croppedCanvas.height}`;
+        safeMosaic(50, Math.round(50 * (croppedCanvas.height/croppedCanvas.width)));
+    }
+
+    function showLimitWarning() {
+        const el = document.getElementById('limitWarning');
+        el.style.opacity = '1';
+        if (warningTimer) clearTimeout(warningTimer);
+        warningTimer = setTimeout(() => { el.style.opacity = '0'; }, 3000);
+    }
+
+    function safeMosaic(tw, th) {
+        let isLimited = false;
+        let finalW = tw; let finalH = th;
+        if (tw > croppedCanvas.width) { finalW = croppedCanvas.width; isLimited = true; }
+        if (th > croppedCanvas.height) { finalH = croppedCanvas.height; isLimited = true; }
+        if (isLimited) showLimitWarning();
+        const tCanvas = document.createElement('canvas');
+        tCanvas.width = finalW; tCanvas.height = finalH;
+        tCanvas.getContext('2d').drawImage(croppedCanvas, 0, 0, finalW, finalH);
+        smallCanvasData = tCanvas.getContext('2d').getImageData(0, 0, finalW, finalH);
+        originalPixelData = new ImageData(new Uint8ClampedArray(smallCanvasData.data), finalW, finalH);
+        render();
+    }
+
+    function applyCustom() {
+        const w = parseInt(document.getElementById('customW').value);
+        const h = parseInt(document.getElementById('customH').value);
+        if (w > 0 && h > 0) safeMosaic(w, h);
+    }
+
+    function resetColors() {
+        if (!originalPixelData) return;
+        smallCanvasData.data.set(originalPixelData.data);
+        render();
+    }
+
+    function render() {
+        if (!smallCanvasData) return;
+        const w = smallCanvasData.width, h = smallCanvasData.height;
+        const scale = Math.floor(Math.min(700/w, 600/h)) || 1;
+        canvas.width = w * scale; canvas.height = h * scale;
+        ctx.imageSmoothingEnabled = false;
+        const tCanvas = document.createElement('canvas');
+        tCanvas.width = w; tCanvas.height = h;
+        tCanvas.getContext('2d').putImageData(smallCanvasData, 0, 0);
+        ctx.drawImage(tCanvas, 0, 0, w, h, 0, 0, canvas.width, canvas.height);
+        if (document.getElementById('showGrid').checked) {
+            ctx.beginPath(); ctx.strokeStyle = "rgba(0,0,0,0.15)";
+            for(let x=0; x<=canvas.width; x+=scale) { ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); }
+            for(let y=0; y<=canvas.height; y+=scale) { ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); }
+            ctx.stroke();
+        }
+    }
+
+    function applyPalette(mode, dither) {
+        resetColors();
+        const data = smallCanvasData.data;
+        const w = smallCanvasData.width, h = smallCanvasData.height;
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                const i = (y * w + x) * 4;
+                const r = data[i], g = data[i+1], b = data[i+2];
+                let n;
+                if(mode === 'town') n = getNear(r, g, b, TOWN_PALETTE);
+                else if(mode === '16') n = getNear(r, g, b, PALETTE_16);
+                else n = [Math.round(r/51)*51, Math.round(g/51)*51, Math.round(b/51)*51];
+                data[i] = n[0]; data[i+1] = n[1]; data[i+2] = n[2];
+                if (dither) {
+                    const er = r - n[0], eg = g - n[1], eb = b - n[2];
+                    dist(data, x+1, y, w, h, er, eg, eb, 7/16);
+                    dist(data, x-1, y+1, w, h, er, eg, eb, 3/16);
+                    dist(data, x, y+1, w, h, er, eg, eb, 5/16);
+                    dist(data, x+1, y+1, w, h, er, eg, eb, 1/16);
+                }
+            }
+        }
+        render();
+    }
+
+    function getNear(r, g, b, pal) {
+        let m = Infinity, bst = pal[0];
+        for (const c of pal) {
+            const d = (r-c[0])**2 + (g-c[1])**2 + (b-c[2])**2;
+            if (d < m) { m = d; bst = c; }
+        }
+        return bst;
+    }
+
+    function dist(data, x, y, w, h, er, eg, eb, wt) {
+        if (x < 0 || x >= w || y >= h) return;
+        const i = (y * w + x) * 4;
+        data[i] += er * wt; data[i+1] += eg * wt; data[i+2] += eb * wt;
+    }
+
+    function downloadImage(withGrid) {
+        const link = document.createElement('a');
+        link.download = withGrid ? 'TownArt_Grid.png' : 'TownArt_Pixel.png';
+        const currentGridState = document.getElementById('showGrid').checked;
+        document.getElementById('showGrid').checked = withGrid;
+        render();
+        link.href = canvas.toDataURL();
+        link.click();
+        document.getElementById('showGrid').checked = currentGridState;
+        render();
+    }
+</script>
+</body>
+</html>
