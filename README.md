@@ -4,7 +4,7 @@
 
 PixTown Assistant 是一個輕量、強大的前端圖片處理工具，旨在幫助玩家將現實照片或插畫轉化為高品質的像素風格參考圖。特別針對《心動小鎮》遊戲內的 125 色畫板進行了色彩匹配優化。
 
-https://sysheng17.github.io/PixelArt-Assistant/
+[PixTown Assistant 心動小鎮畫作助手 WEB](https://sysheng17.github.io/PixelArt-Assistant/)
 
 ## ✨ 功能特色
 
