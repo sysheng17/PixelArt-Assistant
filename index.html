@@ -279,15 +279,49 @@
         const scale = Math.floor(Math.min(700/w, 600/h)) || 1;
         canvas.width = w * scale; canvas.height = h * scale;
         ctx.imageSmoothingEnabled = false;
+        
+        // 繪製像素本體
         const tCanvas = document.createElement('canvas');
         tCanvas.width = w; tCanvas.height = h;
         tCanvas.getContext('2d').putImageData(smallCanvasData, 0, 0);
         ctx.drawImage(tCanvas, 0, 0, w, h, 0, 0, canvas.width, canvas.height);
+        
+        // 繪製網格
         if (document.getElementById('showGrid').checked) {
-            ctx.beginPath(); ctx.strokeStyle = "rgba(0,0,0,0.15)";
-            for(let x=0; x<=canvas.width; x+=scale) { ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); }
-            for(let y=0; y<=canvas.height; y+=scale) { ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); }
-            ctx.stroke();
+            ctx.beginPath();
+            
+            // 垂直線 (從左邊開始算)
+            for(let x=0; x<=w; x++) {
+                const posX = x * scale;
+                ctx.moveTo(posX, 0); ctx.lineTo(posX, canvas.height);
+                // 每 5 格或最後一條線加粗
+                if (x % 5 === 0 || x === w) {
+                    ctx.lineWidth = 2.5; // 粗線
+                    ctx.strokeStyle = "rgba(0,0,0,0.5)";
+                } else {
+                    ctx.lineWidth = 1.5;   // 普通線
+                    ctx.strokeStyle = "rgba(0,0,0,0.25)";
+                }
+                ctx.stroke();
+                ctx.beginPath(); // 重置路徑避免樣式污染
+            }
+            
+            // 水平線 (從底部開始算)
+            // 算法：從 h 遞減到 0，這樣餘數為 0 的位置就是從底部往上數每 5 格
+            for(let y=0; y<=h; y++) {
+                const posY = (h - y) * scale;
+                ctx.moveTo(0, posY); ctx.lineTo(canvas.width, posY);
+                // 每 5 格或頂底部線加粗
+                if (y % 5 === 0 || y === h) {
+                    ctx.lineWidth = 2.5;
+                    ctx.strokeStyle = "rgba(0,0,0,0.5)";
+                } else {
+                    ctx.lineWidth = 1;
+                    ctx.strokeStyle = "rgba(0,0,0,0.25)";
+                }
+                ctx.stroke();
+                ctx.beginPath();
+            }
         }
     }
 
@@ -345,6 +379,7 @@
 </script>
 </body>
 </html>
+
 
 
 
