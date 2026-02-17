@@ -10,9 +10,8 @@
         body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); padding: 20px; color: #1e293b; }
         .container { max-width: 1100px; margin: 0 auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); position: relative; }
         
-        /* 語言切換按鈕 */
         .lang-switch { position: absolute; top: 20px; right: 25px; }
-        .lang-btn { background: #e2e8f0; padding: 5px 12px; border-radius: 15px; font-weight: bold; font-size: 0.8rem; border: 2px solid transparent; }
+        .lang-btn { background: #e2e8f0; padding: 5px 12px; border-radius: 15px; font-weight: bold; font-size: 0.8rem; border: 2px solid transparent; cursor: pointer; }
         .lang-btn.active { border-color: var(--primary); background: #fff; color: var(--primary); }
 
         .edit-layout { display: grid; grid-template-columns: 1fr 380px; gap: 25px; margin-top: 20px; }
@@ -37,45 +36,25 @@
         .btn-success { background: var(--success); color: white; width: 100%; padding: 12px; font-weight: bold; margin-bottom: 8px; border-radius: 8px; }
         .btn-reset { background: var(--reset); color: white; width: 100%; margin-top: 5px; }
 
+        /* 逐色模式按鈕樣式 */
+        .color-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; max-height: 180px; overflow-y: auto; padding: 5px; }
+        .color-item { width: 30px; height: 30px; border-radius: 6px; border: 2px solid #e2e8f0; cursor: pointer; transition: 0.2s; }
+        .color-item:hover { transform: scale(1.1); }
+        .color-item.active { outline: 3px solid var(--primary); outline-offset: 2px; border-color: #fff; z-index: 1; }
+
         .custom-input { display: flex; align-items: center; gap: 5px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e2e8f0; }
         input[type="number"] { width: 60px; padding: 5px; border: 1px solid #cbd5e1; border-radius: 4px; }
         
         #limitWarning { color: var(--danger); font-size: 0.75rem; font-weight: bold; margin-top: 5px; height: 18px; opacity: 0; transition: opacity 0.3s; }
         .hint { font-size: 0.7rem; color: #94a3b8; }
-
-        /* 逐色模式專用樣式 */
-        .color-list { 
-            display: flex; 
-            flex-wrap: wrap; 
-            gap: 6px; 
-            margin-top: 10px; 
-            max-height: 200px; 
-            overflow-y: auto; 
-            padding: 5px;
-        }
-        .color-item { 
-            width: 32px; 
-            height: 32px; 
-            border-radius: 6px; 
-            border: 2px solid #e2e8f0; 
-            cursor: pointer; 
-            transition: all 0.2s; 
-        }
-        .color-item:hover { transform: scale(1.1); border-color: #cbd5e1; }
-        .color-item.active { 
-            outline: 3px solid var(--primary); 
-            outline-offset: 2px;
-            border-color: white;
-            z-index: 1; 
-        }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="lang-switch">
-        <button class="lang-btn active" onclick="switchLang('zh')">中文</button>
-        <button class="lang-btn" onclick="switchLang('en')">EN</button>
+        <button class="lang-btn active" onclick="switchLang('zh', event)">中文</button>
+        <button class="lang-btn" onclick="switchLang('en', event)">EN</button>
     </div>
 
     <h2 id="ui-title" style="text-align:center;">🎨 心動小鎮畫作助手</h2>
@@ -130,6 +109,7 @@
                 <div id="maxHint" class="hint"></div>
                 <label style="font-size:0.8rem; margin-top:10px; display:block;"><input type="checkbox" id="showGrid" onchange="render()" checked> <span id="ui-grid-label">顯示參考網格</span></label>
             </div>
+               
 
             <div class="group">
                 <h3 id="ui-h-color">2. 色彩處理模式</h3>
@@ -141,12 +121,13 @@
                     <button class="btn-reset" style="grid-column: span 2;" id="ui-reset-btn" onclick="resetColors()">🔄 重置原始色彩</button>
                 </div>
             </div>
+
             <div class="group">
-                <h3 id="ui-h-step">3. 逐色模式 (選用)</h3>
-                <button onclick="filterColor(null)" style="width:100%; margin-bottom:10px;" id="ui-show-all">分析&顯示全部顏色</button>
-                <div id="colorPickerList" class="color-list">
-                    </div>
+                <h3 id="ui-h-step">3. 逐色模式(選用)</h3>
+                <button onclick="filterColor(null)" style="width:100%; margin-bottom:8px;" id="ui-show-all">顯示全部顏色</button>
+                <div id="colorPickerList" class="color-list"></div>
             </div>
+
             <div class="group">
                 <h3 id="ui-h-export">4. 導出</h3>
                 <button class="btn-success" id="ui-dl-pure" onclick="downloadImage(false)">💾 下載純淨像素圖</button>
@@ -154,23 +135,22 @@
             </div>
         </div>
     </div>
-    <div style="margin-top: 20px; padding: 15px; border-radius: 12px; background: #fffaf0; border: 1px dashed #ffb7b2; text-align: center;">
-    <strong style="font-size: 0.85rem; color: #d63031;">☕ 支持我 (Support Me)</strong>
-    <p style="font-size: 0.75rem; color: #636e72; margin: 8px 0;">
-        <a href="https://forms.gle/v8TYdQW9VzEBVacA7">Feedback & Suggestions Form / 問題&建議回饋表單</a><br>
-        如果你覺得這個工具有幫助，可以請我喝杯咖啡！<br>
-        If you find this tool helpful, feel free to buy me a coffee!
-    </p>
-    <a href="https://ko-fi.com/shenlyway" target="_blank" style="display: inline-block;">
-        <img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="ko-fi" style="height: 32px; vertical-align: middle;">
-    </a>
-</div>
-</div>
     
+    <div style="margin-top: 20px; padding: 15px; border-radius: 12px; background: #fffaf0; border: 1px dashed #ffb7b2; text-align: center;">
+        <strong style="font-size: 0.85rem; color: #d63031;">☕ 支持我 (Support Me)</strong>
+        <p style="font-size: 0.75rem; color: #636e72; margin: 8px 0;">
+            <a href="https://forms.gle/v8TYdQW9VzEBVacA7" target="_blank">Feedback & Suggestions Form / 問題&建議回饋表單</a><br>
+            如果你覺得這個工具有幫助，可以請我喝杯咖啡！<br>
+            If you find this tool helpful, feel free to buy me a coffee!
+        </p>
+        <a href="https://ko-fi.com/shenlyway" target="_blank" style="display: inline-block;">
+            <img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="ko-fi" style="height: 32px; vertical-align: middle;">
+        </a>
+    </div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 <script>
-    // 語言資源
     const i18n = {
         zh: {
             title: "🎨 心動小鎮畫作助手",
@@ -187,7 +167,7 @@
             c16: "復古 16 色",
             reset: "🔄 重置原始色彩",
             hStep: "3. 逐色模式(選用)",
-            showAll: "分析&顯示全部顏色",
+            showAll: "顯示全部顏色",
             hExport: "4. 導出",
             dlPure: "💾 下載純淨像素圖",
             dlGrid: "📏 下載帶網格參考圖"
@@ -206,8 +186,8 @@
             c256: "Web 256 Color",
             c16: "Retro 16 Color",
             reset: "🔄 Reset to Original",
-            hStep: "3. Color Isolator (Optional)",
-            showAll: "Analyze & Show All Colors",
+            hStep: "3. Step-by-Step Mode (Optional)",
+            showAll: "Show All Colors",
             hExport: "4. Export",
             dlPure: "💾 Download Pixel Art",
             dlGrid: "📏 Download with Grid"
@@ -215,11 +195,12 @@
     };
 
     let currentLang = 'zh';
+    let targetColor = null;
 
-    function switchLang(lang) {
+    function switchLang(lang, e) {
         currentLang = lang;
         document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
-        event.target.classList.add('active');
+        e.target.classList.add('active');
         
         const t = i18n[lang];
         document.getElementById('ui-title').innerText = t.title;
@@ -234,11 +215,12 @@
         document.getElementById('ui-256').innerText = t.c256;
         document.getElementById('ui-16').innerText = t.c16;
         document.getElementById('ui-reset-btn').innerText = t.reset;
+        document.getElementById('ui-h-step').innerText = t.hStep;
+        document.getElementById('ui-show-all').innerText = t.showAll;
         document.getElementById('ui-h-export').innerText = t.hExport;
         document.getElementById('ui-dl-pure').innerText = t.dlPure;
         document.getElementById('ui-dl-grid').innerText = t.dlGrid;
         
-        // 更新極限提示文字
         if (croppedCanvas) {
             document.getElementById('maxHint').innerText = `${t.maxHint}${croppedCanvas.width}x${croppedCanvas.height}`;
         }
@@ -275,24 +257,46 @@
         safeMosaic(50, Math.round(50 * (croppedCanvas.height/croppedCanvas.width)));
     }
 
-    function showLimitWarning() {
-        const el = document.getElementById('limitWarning');
-        el.style.opacity = '1';
-        if (warningTimer) clearTimeout(warningTimer);
-        warningTimer = setTimeout(() => { el.style.opacity = '0'; }, 3000);
-    }
-
     function safeMosaic(tw, th) {
-        let isLimited = false;
-        let finalW = tw; let finalH = th;
-        if (tw > croppedCanvas.width) { finalW = croppedCanvas.width; isLimited = true; }
-        if (th > croppedCanvas.height) { finalH = croppedCanvas.height; isLimited = true; }
-        if (isLimited) showLimitWarning();
+        if (!croppedCanvas) return;
+        let finalW = Math.min(tw, croppedCanvas.width);
+        let finalH = Math.min(th, croppedCanvas.height);
+        if (tw > croppedCanvas.width || th > croppedCanvas.height) {
+            const el = document.getElementById('limitWarning');
+            el.style.opacity = '1';
+            setTimeout(() => { el.style.opacity = '0'; }, 3000);
+        }
         const tCanvas = document.createElement('canvas');
         tCanvas.width = finalW; tCanvas.height = finalH;
         tCanvas.getContext('2d').drawImage(croppedCanvas, 0, 0, finalW, finalH);
         smallCanvasData = tCanvas.getContext('2d').getImageData(0, 0, finalW, finalH);
         originalPixelData = new ImageData(new Uint8ClampedArray(smallCanvasData.data), finalW, finalH);
+        targetColor = null;
+        updateColorButtons();
+        render();
+    }
+
+    function updateColorButtons() {
+        const list = document.getElementById('colorPickerList');
+        list.innerHTML = '';
+        if (!smallCanvasData) return;
+        const colors = new Set();
+        for (let i = 0; i < smallCanvasData.data.length; i += 4) {
+            if (smallCanvasData.data[i+3] < 128) continue;
+            colors.add(`${smallCanvasData.data[i]},${smallCanvasData.data[i+1]},${smallCanvasData.data[i+2]}`);
+        }
+        colors.forEach(col => {
+            const btn = document.createElement('div');
+            btn.className = 'color-item' + (targetColor === col ? ' active' : '');
+            btn.style.backgroundColor = `rgb(${col})`;
+            btn.onclick = () => filterColor(col);
+            list.appendChild(btn);
+        });
+    }
+
+    function filterColor(col) {
+        targetColor = col;
+        updateColorButtons();
         render();
     }
 
@@ -305,113 +309,10 @@
     function resetColors() {
         if (!originalPixelData) return;
         smallCanvasData.data.set(originalPixelData.data);
+        targetColor = null;
+        updateColorButtons();
         render();
     }
-
-    function render() {
-    if (!smallCanvasData) return;
-    const w = smallCanvasData.width, h = smallCanvasData.height;
-    const scale = Math.floor(Math.min(700/w, 600/h)) || 1;
-    canvas.width = w * scale; 
-    canvas.height = h * scale;
-    ctx.imageSmoothingEnabled = false;
-    
-    // --- 第一部分：處理像素 (含逐色過濾) ---
-    // 建立臨時數據拷貝，避免汙染原始資料
-    const tempData = new ImageData(new Uint8ClampedArray(smallCanvasData.data), w, h);
-    
-    // 如果有選中特定顏色，則進行過濾
-    if (targetColor) {
-        const rgb = targetColor.split(',').map(Number);
-        for (let i = 0; i < tempData.data.length; i += 4) {
-            // 比對 R, G, B 值
-            if (tempData.data[i] !== rgb[0] || 
-                tempData.data[i+1] !== rgb[1] || 
-                tempData.data[i+2] !== rgb[2]) {
-                tempData.data[i+3] = 0; // 不匹配的顏色設為完全透明
-            }
-        }
-    }
-
-    // 將處理後的像素畫到畫布上
-    const tCanvas = document.createElement('canvas');
-    tCanvas.width = w; 
-    tCanvas.height = h;
-    tCanvas.getContext('2d').putImageData(tempData, 0, 0);
-    ctx.drawImage(tCanvas, 0, 0, w, h, 0, 0, canvas.width, canvas.height);
-    
-    // --- 第二部分：繪製網格 (確保網格蓋在像素之上) ---
-    if (document.getElementById('showGrid').checked) {
-        ctx.beginPath();
-        
-        // 垂直線 (從左邊開始算)
-        for(let x=0; x<=w; x++) {
-            const posX = x * scale;
-            ctx.moveTo(posX, 0); 
-            ctx.lineTo(posX, canvas.height);
-            
-            if (x % 5 === 0 || x === w) {
-                ctx.lineWidth = 2.5; 
-                ctx.strokeStyle = "rgba(0,0,0,0.5)";
-            } else {
-                ctx.lineWidth = 1.5;
-                ctx.strokeStyle = "rgba(0,0,0,0.25)";
-            }
-            ctx.stroke();
-            ctx.beginPath(); 
-        }
-        
-        // 水平線 (從底部開始算)
-        for(let y=0; y<=h; y++) {
-            const posY = (h - y) * scale;
-            ctx.moveTo(0, posY); 
-            ctx.lineTo(canvas.width, posY);
-            
-            if (y % 5 === 0 || y === h) {
-                ctx.lineWidth = 2.5;
-                ctx.strokeStyle = "rgba(0,0,0,0.5)";
-            } else {
-                ctx.lineWidth = 1;
-                ctx.strokeStyle = "rgba(0,0,0,0.25)";
-            }
-            ctx.stroke();
-            ctx.beginPath();
-        }
-    }
-}
-    // 掃描圖片中所有顏色並生成按鈕
-function updateColorButtons() {
-    const list = document.getElementById('colorPickerList');
-    list.innerHTML = '';
-    const data = smallCanvasData.data;
-    const colors = new Set();
-    
-    // 遍歷所有像素獲取不重複的顏色
-    for (let i = 0; i < data.length; i += 4) {
-        if (data[i+3] === 0) continue; // 跳過透明像素
-        colors.add(`${data[i]},${data[i+1]},${data[i+2]}`);
-    }
-    
-    colors.forEach(col => {
-        const btn = document.createElement('div');
-        btn.className = 'color-item';
-        btn.style.backgroundColor = `rgb(${col})`;
-        if (targetColor === col) btn.classList.add('active');
-        btn.onclick = () => {
-            targetColor = col;
-            updateColorButtons(); // 刷新選中狀態
-            render();
-        };
-        list.appendChild(btn);
-    });
-}
-
-// 切換過濾顏色的函數
-function filterColor(col) {
-    targetColor = col;
-    updateColorButtons();
-    render();
-}
 
     function applyPalette(mode, dither) {
         resetColors();
@@ -435,6 +336,7 @@ function filterColor(col) {
                 }
             }
         }
+        updateColorButtons();
         render();
     }
 
@@ -453,22 +355,62 @@ function filterColor(col) {
         data[i] += er * wt; data[i+1] += eg * wt; data[i+2] += eb * wt;
     }
 
+    function render() {
+        if (!smallCanvasData) return;
+        const w = smallCanvasData.width, h = smallCanvasData.height;
+        const scale = Math.floor(Math.min(700/w, 600/h)) || 1;
+        canvas.width = w * scale; canvas.height = h * scale;
+        ctx.imageSmoothingEnabled = false;
+        
+        const tempData = new ImageData(new Uint8ClampedArray(smallCanvasData.data), w, h);
+        if (targetColor) {
+            const rgb = targetColor.split(',').map(Number);
+            for (let i = 0; i < tempData.data.length; i += 4) {
+                if (tempData.data[i] !== rgb[0] || tempData.data[i+1] !== rgb[1] || tempData.data[i+2] !== rgb[2]) {
+                    tempData.data[i+3] = 0;
+                }
+            }
+        }
+
+        const tCanvas = document.createElement('canvas');
+        tCanvas.width = w; tCanvas.height = h;
+        tCanvas.getContext('2d').putImageData(tempData, 0, 0);
+        ctx.drawImage(tCanvas, 0, 0, w, h, 0, 0, canvas.width, canvas.height);
+        
+        if (document.getElementById('showGrid').checked) {
+            ctx.beginPath();
+            for(let x=0; x<=w; x++) {
+                const posX = x * scale;
+                ctx.moveTo(posX, 0); ctx.lineTo(posX, canvas.height);
+                ctx.lineWidth = (x % 5 === 0 || x === w) ? 2.5 : 1.5;
+                ctx.strokeStyle = (x % 5 === 0 || x === w) ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.25)";
+                ctx.stroke(); ctx.beginPath();
+            }
+            for(let y=0; y<=h; y++) {
+                const posY = (h - y) * scale;
+                ctx.moveTo(0, posY); ctx.lineTo(canvas.width, posY);
+                ctx.lineWidth = (y % 5 === 0 || y === h) ? 2.5 : 1;
+                ctx.strokeStyle = (y % 5 === 0 || y === h) ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.25)";
+                ctx.stroke(); ctx.beginPath();
+            }
+        }
+    }
+
     function downloadImage(withGrid) {
+        if (!smallCanvasData) return;
         const link = document.createElement('a');
         link.download = withGrid ? 'TownArt_Grid.png' : 'TownArt_Pixel.png';
-        const currentGridState = document.getElementById('showGrid').checked;
+        const oldTarget = targetColor;
+        const oldGrid = document.getElementById('showGrid').checked;
+        targetColor = null; 
         document.getElementById('showGrid').checked = withGrid;
         render();
         link.href = canvas.toDataURL();
         link.click();
-        document.getElementById('showGrid').checked = currentGridState;
+        targetColor = oldTarget;
+        document.getElementById('showGrid').checked = oldGrid;
         render();
     }
 </script>
 </body>
 </html>
-
-
-
-
-
