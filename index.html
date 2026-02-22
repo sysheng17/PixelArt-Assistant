@@ -462,67 +462,77 @@
     if (!smallCanvasData) return;
     const w = smallCanvasData.width, h = smallCanvasData.height;
     
-    // 預覽倍率設定為 10，兼顧流暢度與基本辨識度
+    // 預覽倍率維持 10
     const scale = 10; 
     canvas.width = w * scale; 
     canvas.height = h * scale;
     
-    // 初始化繪圖環境
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.imageSmoothingEnabled = false; // 保持像素銳利，不模糊
+    ctx.imageSmoothingEnabled = false;
 
-    // --- 1. 底圖處理 (處理色彩聚焦效果) ---
-    const tempData = new ImageData(new Uint8ClampedArray(smallCanvasData.data), w, h);
+    // --- 1. 底圖處理 (直接繪製，不添加透明度遮罩) ---
+    // 建立一個臨時畫布來放置像素資料
+    const tCanvas = document.createElement('canvas');
+    tCanvas.width = w; 
+    tCanvas.height = h;
+    const tCtx = tCanvas.getContext('2d');
+
+    // 判斷是否處於「逐色模式」(是否有選中特定顏色)
     if (targetColor) {
+        // 如果有選中顏色，我們只在臨時畫布上畫出該顏色的像素
         const rgb = targetColor.split(',').map(Number);
-        for (let i = 0; i < tempData.data.length; i += 4) {
-            // 若非目標顏色，降低透明度，讓使用者專注於當前選中的色塊
-            if (tempData.data[i] !== rgb[0] || tempData.data[i+1] !== rgb[1] || tempData.data[i+2] !== rgb[2]) {
-                tempData.data[i+3] = 35; 
+        const filteredData = tCtx.createImageData(w, h);
+        
+        for (let i = 0; i < smallCanvasData.data.length; i += 4) {
+            const r = smallCanvasData.data[i];
+            const g = smallCanvasData.data[i+1];
+            const b = smallCanvasData.data[i+2];
+            const a = smallCanvasData.data[i+3];
+
+            if (r === rgb[0] && g === rgb[1] && b === rgb[2] && a > 128) {
+                filteredData.data[i] = r;
+                filteredData.data[i+1] = g;
+                filteredData.data[i+2] = b;
+                filteredData.data[i+3] = 255; // 完全不透明
+            } else {
+                filteredData.data[i+3] = 0;   // 其他顏色直接完全透明(不顯示)
             }
         }
+        tCtx.putImageData(filteredData, 0, 0);
+    } else {
+        // 如果沒選顏色，就畫出完整的原始圖案
+        tCtx.putImageData(smallCanvasData, 0, 0);
     }
 
-    // 將像素圖案繪製到預覽畫布
-    const tCanvas = document.createElement('canvas');
-    tCanvas.width = w; tCanvas.height = h;
-    tCanvas.getContext('2d').putImageData(tempData, 0, 0);
+    // 將處理好的圖案放大繪製到主畫布上
     ctx.drawImage(tCanvas, 0, 0, w, h, 0, 0, canvas.width, canvas.height);
 
     // --- 2. 網格繪製 (基準：左側與底部起算) ---
     if (document.getElementById('showGrid').checked) {
         ctx.lineCap = "butt";
 
-        // 繪製垂直線 (左側起算，x=0, 5, 10... 為粗線)
+        // 垂直線
         for (let x = 0; x <= w; x++) {
             ctx.beginPath();
             const isThick = (x % 5 === 0);
             ctx.strokeStyle = isThick ? "rgba(0, 0, 0, 0.8)" : "rgba(0, 0, 0, 0.2)";
-            ctx.lineWidth = isThick ? 2 : 1; // 預覽倍率較小，粗線設為 2px 即可
-            
-            const posX = x * scale;
-            ctx.moveTo(posX, 0);
-            ctx.lineTo(posX, h * scale);
+            ctx.lineWidth = isThick ? 2 : 1;
+            ctx.moveTo(x * scale, 0);
+            ctx.lineTo(x * scale, h * scale);
             ctx.stroke();
         }
 
-        // 繪製水平線 (底部起算，確保地面第一排為基準)
+        // 水平線 (底部起算)
         for (let y = 0; y <= h; y++) {
             ctx.beginPath();
-            // 關鍵邏輯：距離底部 (h-y) 為 5 的倍數時繪製粗線
             const isThick = ((h - y) % 5 === 0);
             ctx.strokeStyle = isThick ? "rgba(0, 0, 0, 0.8)" : "rgba(0, 0, 0, 0.2)";
             ctx.lineWidth = isThick ? 2 : 1;
-
-            const posY = y * scale;
-            ctx.moveTo(0, posY);
-            ctx.lineTo(w * scale, posY);
+            ctx.moveTo(0, y * scale);
+            ctx.lineTo(w * scale, y * scale);
             ctx.stroke();
         }
     }
-
-    // 備註：預覽模式已移除「顯示標號」邏輯以提升效能。
-    // 使用者若需查看標號，請使用「下載標號網格參考圖」導出 30 倍率的高清圖。
 }
     function downloadImage(mode) {
     if (!smallCanvasData) return;
@@ -582,3 +592,4 @@
 </script>
 </body>
 </html>
+
