@@ -20,7 +20,25 @@
         .img-container { max-height: 400px; background: #000; border-radius: 12px; overflow: hidden; margin-bottom: 15px; }
         #imageToCrop { max-width: 100%; }
 
-        .canvas-area { background: #e2e8f0; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 20px; min-height: 500px; overflow: auto; }
+        .canvas-area {
+	    background: #e2e8f0;
+	    border-radius: 12px;
+	    padding: 20px;
+	    display: flex;             /* 讓畫布居中 */
+	    justify-content: center;
+	    align-items: flex-start;   /* 從頂部開始 */
+	    min-height: 400px;
+	    overflow: hidden;          /* 移除捲動條 */
+	}
+	
+		#mainCanvas {
+	    max-width: 100%;
+	    height: auto !important;
+	    image-rendering: pixelated; 
+	    image-rendering: crisp-edges; 
+	    background: white;
+	    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+	}
         canvas { image-rendering: pixelated; background: white; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
 
         .panel { display: flex; flex-direction: column; gap: 15px; }
@@ -139,15 +157,18 @@
 
             <div class="group">
                 <h3 id="ui-h-step">3. 逐色模式(選用) #例：7-3 是第7組第3個顏色</h3>
-                <button onclick="filterColor(null)" style="width:100%; margin-bottom:8px;" id="ui-show-all">顯示全部顏色</button>
-                <div id="colorPickerList" class="color-list"></div>
-            </div>
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+        		<button onclick="filterColor(null)" style="flex:1;" id="ui-show-all">顯示全部顏色</button>
+    		</div>
+    		<div id="colorPickerList" class="color-list"></div>
+	    </div>
 
             <div class="group">
-                <h3 id="ui-h-export">4. 導出</h3>
-                <button class="btn-success" id="ui-dl-pure" onclick="downloadImage(false)">💾 下載純淨像素圖</button>
-                <button class="btn-success" style="background:#64748b;" id="ui-dl-grid" onclick="downloadImage(true)">📏 下載帶網格參考圖</button>
-            </div>
+    		<h3 id="ui-h-export">4. 導出</h3>
+    		<button class="btn-success" onclick="downloadImage('pure')">💾 下載純淨像素圖</button>
+    		<button class="btn-success" style="background:#64748b;" onclick="downloadImage('grid')">📏 下載帶網格參考圖</button>
+    		<button class="btn-success" style="background:#475569;" onclick="downloadImage('label')">🔢 下載標號網格參考圖</button>
+		</div>
         </div>
     </div>
     
@@ -167,79 +188,89 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 <script>
     const i18n = {
-        zh: {
-            title: "🎨 心動小鎮畫作助手",
-            confirmCrop: "確認剪裁",
-            hSize: "1. 常用尺寸",
-            apply: "套用",
-            limit: "⚠️ 已自動修正為原圖尺寸上限",
-            maxHint: "* 原圖像素極限: ",
-            grid: "顯示參考網格",
-            hColor: "2. 色彩處理模式",
-            townDirect: "小鎮 125色 (直接)",
-            townDither: "小鎮 125色 (抖動)",
-            c256: "標準 256 色",
-            c16: "復古 16 色",
-            reset: "🔄 重置原始色彩",
-            hStep: "3. 逐色模式(選用) #例：7-3 是第7組第3個顏色",
-            showAll: "顯示全部顏色",
-            hExport: "4. 導出",
-            dlPure: "💾 下載純淨像素圖",
-            dlGrid: "📏 下載帶網格參考圖"
-        },
-        en: {
-            title: "🎨 Town Art Assistant",
-            confirmCrop: "Confirm Crop",
-            hSize: "1. Common Sizes",
-            apply: "Apply",
-            limit: "⚠️ Limited to original image size",
-            maxHint: "* Original Limit: ",
-            grid: "Show Grid Lines",
-            hColor: "2. Color Processing",
-            townDirect: "Town 125 (Direct)",
-            townDither: "Town 125 (Dither)",
-            c256: "Web 256 Color",
-            c16: "Retro 16 Color",
-            reset: "🔄 Reset to Original",
-            hStep: "3. Step-by-Step Mode (Optional) #e.g., 7-3 is Group 7, 3rd color.",
-            showAll: "Show All Colors",
-            hExport: "4. Export",
-            dlPure: "💾 Download Pixel Art",
-            dlGrid: "📏 Download with Grid"
-        }
-    };
+    zh: {
+        title: "🎨 心動小鎮畫作助手",
+        confirmCrop: "確認剪裁",
+        hSize: "1. 常用尺寸",
+        apply: "套用",
+        limit: "⚠️ 已自動修正為原圖尺寸上限",
+        maxHint: "* 原圖像素極限: ",
+        grid: "顯示參考網格",
+        labelToggle: "顯示標號",
+        hColor: "2. 色彩處理模式",
+        townDirect: "小鎮 125色 (直接)",
+        townDither: "小鎮 125色 (抖動)",
+        c256: "標準 256 色",
+        c16: "復古 16 色",
+        reset: "🔄 重置原始色彩",
+        hStep: "3. 逐色模式(選用) #例：7-3 是第7組第3個顏色",
+        showAll: "顯示全部顏色",
+        hExport: "4. 導出",
+        dlPure: "💾 下載純淨像素圖",
+        dlGrid: "📏 下載帶網格參考圖",
+        dlLabel: "🔢 下載標號網格參考圖"
+    },
+    en: {
+        title: "🎨 Town Art Assistant",
+        confirmCrop: "Confirm Crop",
+        hSize: "1. Common Sizes",
+        apply: "Apply",
+        limit: "⚠️ Limited to original image size",
+        maxHint: "* Original Limit: ",
+        grid: "Show Grid Lines",
+        labelToggle: "Show Labels", // 新增
+        hColor: "2. Color Processing",
+        townDirect: "Town 125 (Direct)",
+        townDither: "Town 125 (Dither)",
+        c256: "Web 256 Color",
+        c16: "Retro 16 Color",
+        reset: "🔄 Reset to Original",
+        hStep: "3. Step-by-Step Mode #e.g., 7-3 is Group 7, 3rd color.",
+        showAll: "Show All Colors",
+        hExport: "4. Export",
+        dlPure: "💾 Download Pixel Art",
+        dlGrid: "📏 Download with Grid",
+        dlLabel: "🔢 Download with Labels"
+    }
+};
 
     let currentLang = 'zh';
     let targetColor = null;
 
     function switchLang(lang, e) {
-        currentLang = lang;
-        document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
-        e.target.classList.add('active');
-        
-        const t = i18n[lang];
-        document.getElementById('ui-title').innerText = t.title;
-        document.getElementById('ui-confirm-crop').innerText = t.confirmCrop;
-        document.getElementById('ui-h-size').innerText = t.hSize;
-        document.getElementById('ui-apply-btn').innerText = t.apply;
-        document.getElementById('limitWarning').innerText = t.limit;
-        document.getElementById('ui-grid-label').innerText = t.grid;
-        document.getElementById('ui-h-color').innerText = t.hColor;
-        document.getElementById('ui-town-direct').innerText = t.townDirect;
-        document.getElementById('ui-town-dither').innerText = t.townDither;
-        document.getElementById('ui-256').innerText = t.c256;
-        document.getElementById('ui-16').innerText = t.c16;
-        document.getElementById('ui-reset-btn').innerText = t.reset;
-        document.getElementById('ui-h-step').innerText = t.hStep;
-        document.getElementById('ui-show-all').innerText = t.showAll;
-        document.getElementById('ui-h-export').innerText = t.hExport;
-        document.getElementById('ui-dl-pure').innerText = t.dlPure;
-        document.getElementById('ui-dl-grid').innerText = t.dlGrid;
-        
-        if (croppedCanvas) {
-            document.getElementById('maxHint').innerText = `${t.maxHint}${croppedCanvas.width}x${croppedCanvas.height}`;
-        }
+    currentLang = lang;
+    document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+    if(e) e.target.classList.add('active');
+    
+    const t = i18n[lang];
+    // 基礎 UI 翻譯
+    document.getElementById('ui-title').innerText = t.title;
+    document.getElementById('ui-confirm-crop').innerText = t.confirmCrop;
+    document.getElementById('ui-h-size').innerText = t.hSize;
+    document.getElementById('ui-apply-btn').innerText = t.apply;
+    document.getElementById('ui-grid-label').innerText = t.grid;
+    document.getElementById('ui-h-color').innerText = t.hColor;
+    document.getElementById('ui-town-direct').innerText = t.townDirect;
+    document.getElementById('ui-town-dither').innerText = t.townDither;
+    document.getElementById('ui-256').innerText = t.c256;
+    document.getElementById('ui-16').innerText = t.c16;
+    document.getElementById('ui-reset-btn').innerText = t.reset;
+    document.getElementById('ui-h-step').innerText = t.hStep;
+    document.getElementById('ui-show-all').innerText = t.showAll;
+    document.getElementById('ui-h-export').innerText = t.hExport;
+    
+    document.getElementById('ui-label-toggle').innerText = t.labelToggle || (lang === 'zh' ? "顯示標號" : "Show Labels");
+    const exportBtns = document.querySelectorAll('.btn-success');
+    if (exportBtns.length >= 3) {
+        exportBtns[0].innerText = t.dlPure || "Download Pure";
+        exportBtns[1].innerText = t.dlGrid || "Download with Grid";
+        exportBtns[2].innerText = t.dlLabel || "Download with Labels";
     }
+
+    if (croppedCanvas) {
+        document.getElementById('maxHint').innerText = `${t.maxHint}${croppedCanvas.width}x${croppedCanvas.height}`;
+    }
+}
 
     const TOWN_PALETTE = [
     [5,22,22],[65,69,69],[128,130,130],[190,191,191],[254,255,255],
@@ -257,6 +288,13 @@
     [173,53,111],[207,107,143],[134,38,88],[217,161,180],[179,121,139],[139,83,103],[96,53,75],[228,213,218],[188,173,177],[114,94,102]
 ];
 
+    function getColorLabel(index) {
+    if (index === -1) return "";
+    if (index < 5) return `1-${index + 1}`;
+    const groupNum = Math.floor((index - 5) / 10) + 2;
+    const itemNum = (index - 5) % 10 + 1;
+    return `${groupNum}-${itemNum}`;
+}
     const PALETTE_16 = [[0,0,0],[255,255,255],[255,0,0],[0,255,0],[0,0,255],[255,255,0],[0,255,255],[255,0,255],[192,192,192],[128,128,128],[128,0,0],[128,128,0],[0,128,0],[128,0,128],[0,128,128],[0,0,128]];
     let cropper, croppedCanvas, smallCanvasData, originalPixelData, warningTimer;
     const canvas = document.getElementById('mainCanvas'), ctx = canvas.getContext('2d');
@@ -421,99 +459,126 @@
     }
 
     function render() {
-        if (!smallCanvasData) return;
-        const w = smallCanvasData.width, h = smallCanvasData.height;
-        const scale = Math.floor(Math.min(700/w, 600/h)) || 1;
-        canvas.width = w * scale; canvas.height = h * scale;
-        ctx.imageSmoothingEnabled = false;
-        
-        const tempData = new ImageData(new Uint8ClampedArray(smallCanvasData.data), w, h);
-        if (targetColor) {
-            const rgb = targetColor.split(',').map(Number);
-            for (let i = 0; i < tempData.data.length; i += 4) {
-                if (tempData.data[i] !== rgb[0] || tempData.data[i+1] !== rgb[1] || tempData.data[i+2] !== rgb[2]) {
-                    tempData.data[i+3] = 0;
-                }
-            }
-        }
-
-        const tCanvas = document.createElement('canvas');
-        tCanvas.width = w; tCanvas.height = h;
-        tCanvas.getContext('2d').putImageData(tempData, 0, 0);
-        ctx.drawImage(tCanvas, 0, 0, w, h, 0, 0, canvas.width, canvas.height);
-        
-        if (document.getElementById('showGrid').checked) {
-            ctx.beginPath();
-            for(let x=0; x<=w; x++) {
-                const posX = x * scale;
-                ctx.moveTo(posX, 0); ctx.lineTo(posX, canvas.height);
-                ctx.lineWidth = (x % 5 === 0 || x === w) ? 2.5 : 1.5;
-                ctx.strokeStyle = (x % 5 === 0 || x === w) ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.25)";
-                ctx.stroke(); ctx.beginPath();
-            }
-            for(let y=0; y<=h; y++) {
-                const posY = (h - y) * scale;
-                ctx.moveTo(0, posY); ctx.lineTo(canvas.width, posY);
-                ctx.lineWidth = (y % 5 === 0 || y === h) ? 2.5 : 1;
-                ctx.strokeStyle = (y % 5 === 0 || y === h) ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.25)";
-                ctx.stroke(); ctx.beginPath();
-            }
-        }
-    }
-
-    function downloadImage(withGrid) {
     if (!smallCanvasData) return;
     const w = smallCanvasData.width, h = smallCanvasData.height;
     
-    // 設定放大倍率：10倍是兼顧檔案大小與手機清晰度的黃金比例
-    const upscaleFactor = 10; 
-    const outCanvas = document.createElement('canvas');
+    // 預覽倍率設定為 10，兼顧流暢度與基本辨識度
+    const scale = 10; 
+    canvas.width = w * scale; 
+    canvas.height = h * scale;
     
-    // 如果有網格，為了讓線條好看，我們可以稍微再放大一點或維持 10 倍
-    const drawScale = upscaleFactor;
-    outCanvas.width = w * drawScale;
-    outCanvas.height = h * drawScale;
-    const outCtx = outCanvas.getContext('2d');
+    // 初始化繪圖環境
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.imageSmoothingEnabled = false; // 保持像素銳利，不模糊
 
-    // 【關鍵】關閉平滑化，實現無損放大
-    outCtx.imageSmoothingEnabled = false;
-
-    // 1. 繪製像素底圖
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = w; tempCanvas.height = h;
-    tempCanvas.getContext('2d').putImageData(smallCanvasData, 0, 0);
-    
-    // 將小圖拉伸到大畫布上
-    outCtx.drawImage(tempCanvas, 0, 0, w, h, 0, 0, outCanvas.width, outCanvas.height);
-
-    // 2. 如果需要網格，在高解析度畫布上重新繪製
-    if (withGrid) {
-        outCtx.beginPath();
-        for(let x=0; x<=w; x++) {
-            outCtx.moveTo(x * drawScale, 0);
-            outCtx.lineTo(x * drawScale, outCanvas.height);
-            outCtx.lineWidth = (x % 5 === 0) ? 3 : 1; // 粗細對比
-            outCtx.strokeStyle = "rgba(0,0,0,0.4)";
-            outCtx.stroke();
-            outCtx.beginPath();
-        }
-        for(let y=0; y<=h; y++) {
-            outCtx.moveTo(0, (h - y) * drawScale);
-            outCtx.lineTo(outCanvas.width, (h - y) * drawScale);
-            outCtx.lineWidth = (y % 5 === 0) ? 3 : 1;
-            outCtx.strokeStyle = "rgba(0,0,0,0.4)";
-            outCtx.stroke();
-            outCtx.beginPath();
+    // --- 1. 底圖處理 (處理色彩聚焦效果) ---
+    const tempData = new ImageData(new Uint8ClampedArray(smallCanvasData.data), w, h);
+    if (targetColor) {
+        const rgb = targetColor.split(',').map(Number);
+        for (let i = 0; i < tempData.data.length; i += 4) {
+            // 若非目標顏色，降低透明度，讓使用者專注於當前選中的色塊
+            if (tempData.data[i] !== rgb[0] || tempData.data[i+1] !== rgb[1] || tempData.data[i+2] !== rgb[2]) {
+                tempData.data[i+3] = 35; 
+            }
         }
     }
 
-    // 執行下載
+    // 將像素圖案繪製到預覽畫布
+    const tCanvas = document.createElement('canvas');
+    tCanvas.width = w; tCanvas.height = h;
+    tCanvas.getContext('2d').putImageData(tempData, 0, 0);
+    ctx.drawImage(tCanvas, 0, 0, w, h, 0, 0, canvas.width, canvas.height);
+
+    // --- 2. 網格繪製 (基準：左側與底部起算) ---
+    if (document.getElementById('showGrid').checked) {
+        ctx.lineCap = "butt";
+
+        // 繪製垂直線 (左側起算，x=0, 5, 10... 為粗線)
+        for (let x = 0; x <= w; x++) {
+            ctx.beginPath();
+            const isThick = (x % 5 === 0);
+            ctx.strokeStyle = isThick ? "rgba(0, 0, 0, 0.8)" : "rgba(0, 0, 0, 0.2)";
+            ctx.lineWidth = isThick ? 2 : 1; // 預覽倍率較小，粗線設為 2px 即可
+            
+            const posX = x * scale;
+            ctx.moveTo(posX, 0);
+            ctx.lineTo(posX, h * scale);
+            ctx.stroke();
+        }
+
+        // 繪製水平線 (底部起算，確保地面第一排為基準)
+        for (let y = 0; y <= h; y++) {
+            ctx.beginPath();
+            // 關鍵邏輯：距離底部 (h-y) 為 5 的倍數時繪製粗線
+            const isThick = ((h - y) % 5 === 0);
+            ctx.strokeStyle = isThick ? "rgba(0, 0, 0, 0.8)" : "rgba(0, 0, 0, 0.2)";
+            ctx.lineWidth = isThick ? 2 : 1;
+
+            const posY = y * scale;
+            ctx.moveTo(0, posY);
+            ctx.lineTo(w * scale, posY);
+            ctx.stroke();
+        }
+    }
+
+    // 備註：預覽模式已移除「顯示標號」邏輯以提升效能。
+    // 使用者若需查看標號，請使用「下載標號網格參考圖」導出 30 倍率的高清圖。
+}
+    function downloadImage(mode) {
+    if (!smallCanvasData) return;
+    const w = smallCanvasData.width, h = smallCanvasData.height;
+    const upscale = 30; // 固定放大倍率
+    const outCanvas = document.createElement('canvas');
+    outCanvas.width = w * upscale; outCanvas.height = h * upscale;
+    const outCtx = outCanvas.getContext('2d');
+    outCtx.imageSmoothingEnabled = false;
+
+    // 1. 底圖
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = w; tempCanvas.height = h;
+    tempCanvas.getContext('2d').putImageData(smallCanvasData, 0, 0);
+    outCtx.drawImage(tempCanvas, 0, 0, w, h, 0, 0, outCanvas.width, outCanvas.height);
+
+    if (mode === 'grid' || mode === 'label') {
+        // 2. 畫網格
+        outCtx.strokeStyle = "rgba(0,0,0,0.3)";
+        for(let x=0; x<=w; x++) {
+            outCtx.lineWidth = (x % 5 === 0) ? 3 : 1;
+            outCtx.beginPath(); outCtx.moveTo(x*upscale, 0); outCtx.lineTo(x*upscale, outCanvas.height); outCtx.stroke();
+        }
+        for(let y=0; y<=h; y++) {
+            outCtx.lineWidth = (y % 5 === 0) ? 3 : 1;
+            outCtx.beginPath(); outCtx.moveTo(0, y*upscale); outCtx.lineTo(outCanvas.width, y*upscale); outCtx.stroke();
+        }
+    }
+
+    if (mode === 'label') {
+        // 3. 畫標號
+        outCtx.textAlign = "center";
+        outCtx.textBaseline = "middle";
+        outCtx.font = `bold ${Math.floor(upscale * 0.35)}px sans-serif`;
+
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                const i = (y * w + x) * 4;
+                const r = smallCanvasData.data[i], g = smallCanvasData.data[i+1], b = smallCanvasData.data[i+2];
+                const colorIdx = TOWN_PALETTE.findIndex(c => c.join(',') === `${r},${g},${b}`);
+                const label = getColorLabel(colorIdx);
+
+                if (label) {
+                    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+                    outCtx.fillStyle = brightness > 128 ? "rgba(0,0,0,0.8)" : "rgba(255,255,255,0.9)";
+                    outCtx.fillText(label, x * upscale + upscale/2, y * upscale + upscale/2);
+                }
+            }
+        }
+    }
+
     const link = document.createElement('a');
-    link.download = withGrid ? `TownArt_Grid_${w}x${h}.png` : `TownArt_Sharp_${w}x${h}.png`;
+    link.download = `TownArt_${mode}_${w}x${h}.png`;
     link.href = outCanvas.toDataURL('image/png');
     link.click();
 }
 </script>
 </body>
 </html>
-
