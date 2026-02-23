@@ -21,24 +21,25 @@
         #imageToCrop { max-width: 100%; }
 
         .canvas-area {
-	    background: #e2e8f0;
-	    border-radius: 12px;
-	    padding: 20px;
-	    display: flex;             /* 讓畫布居中 */
-	    justify-content: center;
-	    align-items: flex-start;   /* 從頂部開始 */
-	    min-height: 400px;
-	    overflow: hidden;          /* 移除捲動條 */
-	}
-	
-		#mainCanvas {
-	    max-width: 100%;
-	    height: auto !important;
-	    image-rendering: pixelated; 
-	    image-rendering: crisp-edges; 
-	    background: white;
-	    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-	}
+    background: #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;             /* 讓畫布居中 */
+    justify-content: center;
+    align-items: flex-start;   /* 從頂部開始 */
+    min-height: 400px;
+    overflow: hidden;          /* 移除捲動條 */
+}
+
+	#mainCanvas {
+    max-width: 100%;
+    height: auto !important;
+    image-rendering: pixelated; 
+    image-rendering: crisp-edges; 
+    
+    background: white;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
         canvas { image-rendering: pixelated; background: white; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
 
         .panel { display: flex; flex-direction: column; gap: 15px; }
@@ -165,10 +166,11 @@
 
             <div class="group">
     		<h3 id="ui-h-export">4. 導出</h3>
+    		<button class="btn-success" style="background:#818cf8;" onclick="downloadImage('raw')">🖼️ 下載當前尺寸 (1:1 像素)</button>
     		<button class="btn-success" onclick="downloadImage('pure')">💾 下載純淨像素圖</button>
     		<button class="btn-success" style="background:#64748b;" onclick="downloadImage('grid')">📏 下載帶網格參考圖</button>
     		<button class="btn-success" style="background:#475569;" onclick="downloadImage('label')">🔢 下載標號網格參考圖</button>
-		</div>
+	    </div>
         </div>
     </div>
     
@@ -206,6 +208,7 @@
         hStep: "3. 逐色模式(選用) #例：7-3 是第7組第3個顏色",
         showAll: "顯示全部顏色",
         hExport: "4. 導出",
+	dlRaw: "🖼️ 下載當前尺寸 (1:1 像素)",
         dlPure: "💾 下載純淨像素圖",
         dlGrid: "📏 下載帶網格參考圖",
         dlLabel: "🔢 下載標號網格參考圖"
@@ -228,6 +231,7 @@
         hStep: "3. Step-by-Step Mode #e.g., 7-3 is Group 7, 3rd color.",
         showAll: "Show All Colors",
         hExport: "4. Export",
+	dlRaw: "🖼️ Download Raw (1:1 Pixel)",
         dlPure: "💾 Download Pixel Art",
         dlGrid: "📏 Download with Grid",
         dlLabel: "🔢 Download with Labels"
@@ -259,12 +263,13 @@
     document.getElementById('ui-show-all').innerText = t.showAll;
     document.getElementById('ui-h-export').innerText = t.hExport;
     
-    document.getElementById('ui-label-toggle').innerText = t.labelToggle || (lang === 'zh' ? "顯示標號" : "Show Labels");
+    // 修正：這裡改為抓取所有下載按鈕進行翻譯
     const exportBtns = document.querySelectorAll('.btn-success');
-    if (exportBtns.length >= 3) {
-        exportBtns[0].innerText = t.dlPure || "Download Pure";
-        exportBtns[1].innerText = t.dlGrid || "Download with Grid";
-        exportBtns[2].innerText = t.dlLabel || "Download with Labels";
+    if (exportBtns.length >= 4) {
+        exportBtns[0].innerText = t.dlRaw;
+        exportBtns[1].innerText = t.dlPure;
+        exportBtns[2].innerText = t.dlGrid;
+        exportBtns[3].innerText = t.dlLabel;
     }
 
     if (croppedCanvas) {
@@ -462,74 +467,68 @@
     if (!smallCanvasData) return;
     const w = smallCanvasData.width, h = smallCanvasData.height;
     
-    // 預覽倍率維持 10
+    // 預覽倍率設定為 10
     const scale = 10; 
     canvas.width = w * scale; 
     canvas.height = h * scale;
     
+    // 初始化繪圖環境
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.imageSmoothingEnabled = false;
 
-    // --- 1. 底圖處理 (直接繪製，不添加透明度遮罩) ---
-    // 建立一個臨時畫布來放置像素資料
-    const tCanvas = document.createElement('canvas');
-    tCanvas.width = w; 
-    tCanvas.height = h;
-    const tCtx = tCanvas.getContext('2d');
-
-    // 判斷是否處於「逐色模式」(是否有選中特定顏色)
+    // --- 1. 底圖處理 (純白背景 + 僅顯示目標色) ---
+    const tempData = new ImageData(new Uint8ClampedArray(smallCanvasData.data), w, h);
+    
+    // 如果有選中特定顏色 (逐色模式)
     if (targetColor) {
-        // 如果有選中顏色，我們只在臨時畫布上畫出該顏色的像素
         const rgb = targetColor.split(',').map(Number);
-        const filteredData = tCtx.createImageData(w, h);
-        
-        for (let i = 0; i < smallCanvasData.data.length; i += 4) {
-            const r = smallCanvasData.data[i];
-            const g = smallCanvasData.data[i+1];
-            const b = smallCanvasData.data[i+2];
-            const a = smallCanvasData.data[i+3];
-
-            if (r === rgb[0] && g === rgb[1] && b === rgb[2] && a > 128) {
-                filteredData.data[i] = r;
-                filteredData.data[i+1] = g;
-                filteredData.data[i+2] = b;
-                filteredData.data[i+3] = 255; // 完全不透明
+        for (let i = 0; i < tempData.data.length; i += 4) {
+            const isTarget = (tempData.data[i] === rgb[0] && 
+                              tempData.data[i+1] === rgb[1] && 
+                              tempData.data[i+2] === rgb[2]);
+            
+            if (!isTarget) {
+                // 如果不是目標顏色，全部變成純白色
+                tempData.data[i] = 255;     // R
+                tempData.data[i+1] = 255;   // G
+                tempData.data[i+2] = 255;   // B
+                tempData.data[i+3] = 255;   // A (不透明)
             } else {
-                filteredData.data[i+3] = 0;   // 其他顏色直接完全透明(不顯示)
+                // 如果是目標顏色，確保它是完全不透明的
+                tempData.data[i+3] = 255;
             }
         }
-        tCtx.putImageData(filteredData, 0, 0);
-    } else {
-        // 如果沒選顏色，就畫出完整的原始圖案
-        tCtx.putImageData(smallCanvasData, 0, 0);
     }
 
-    // 將處理好的圖案放大繪製到主畫布上
+    // 將處理好的數據繪製到預覽畫布
+    const tCanvas = document.createElement('canvas');
+    tCanvas.width = w; tCanvas.height = h;
+    tCanvas.getContext('2d').putImageData(tempData, 0, 0);
     ctx.drawImage(tCanvas, 0, 0, w, h, 0, 0, canvas.width, canvas.height);
 
-    // --- 2. 網格繪製 (基準：左側與底部起算) ---
+    // --- 2. 網格繪製 ---
     if (document.getElementById('showGrid').checked) {
         ctx.lineCap = "butt";
 
-        // 垂直線
         for (let x = 0; x <= w; x++) {
             ctx.beginPath();
             const isThick = (x % 5 === 0);
-            ctx.strokeStyle = isThick ? "rgba(0, 0, 0, 0.8)" : "rgba(0, 0, 0, 0.2)";
-            ctx.lineWidth = isThick ? 2 : 1;
-            ctx.moveTo(x * scale, 0);
-            ctx.lineTo(x * scale, h * scale);
+            ctx.strokeStyle = isThick ? "rgba(0, 0, 0, 0.5)" : "rgba(0, 0, 0, 0.15)";
+            ctx.lineWidth = isThick ? 2 : 1; 
+            const posX = x * scale;
+            ctx.moveTo(posX, 0);
+            ctx.lineTo(posX, h * scale);
             ctx.stroke();
         }
 
-        // 水平線 (底部起算)
         for (let y = 0; y <= h; y++) {
             ctx.beginPath();
             const isThick = ((h - y) % 5 === 0);
-            ctx.strokeStyle = isThick ? "rgba(0, 0, 0, 0.8)" : "rgba(0, 0, 0, 0.2)";
+            ctx.strokeStyle = isThick ? "rgba(0, 0, 0, 0.5)" : "rgba(0, 0, 0, 0.15)";
             ctx.lineWidth = isThick ? 2 : 1;
-            ctx.moveTo(0, y * scale);
-            ctx.lineTo(w * scale, y * scale);
+            const posY = y * scale;
+            ctx.moveTo(0, posY);
+            ctx.lineTo(w * scale, posY);
             ctx.stroke();
         }
     }
@@ -537,59 +536,100 @@
     function downloadImage(mode) {
     if (!smallCanvasData) return;
     const w = smallCanvasData.width, h = smallCanvasData.height;
-    const upscale = 30; // 固定放大倍率
+    const upscale = (mode === 'raw') ? 1 : 30; 
+    
     const outCanvas = document.createElement('canvas');
-    outCanvas.width = w * upscale; outCanvas.height = h * upscale;
+    outCanvas.width = w * upscale; 
+    outCanvas.height = h * upscale;
     const outCtx = outCanvas.getContext('2d');
     outCtx.imageSmoothingEnabled = false;
 
-    // 1. 底圖
+    // 1. 繪製底圖
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = w; tempCanvas.height = h;
     tempCanvas.getContext('2d').putImageData(smallCanvasData, 0, 0);
     outCtx.drawImage(tempCanvas, 0, 0, w, h, 0, 0, outCanvas.width, outCanvas.height);
 
-    if (mode === 'grid' || mode === 'label') {
-        // 2. 畫網格
-        outCtx.strokeStyle = "rgba(0,0,0,0.3)";
-        for(let x=0; x<=w; x++) {
-            outCtx.lineWidth = (x % 5 === 0) ? 3 : 1;
-            outCtx.beginPath(); outCtx.moveTo(x*upscale, 0); outCtx.lineTo(x*upscale, outCanvas.height); outCtx.stroke();
-        }
-        for(let y=0; y<=h; y++) {
-            outCtx.lineWidth = (y % 5 === 0) ? 3 : 1;
-            outCtx.beginPath(); outCtx.moveTo(0, y*upscale); outCtx.lineTo(outCanvas.width, y*upscale); outCtx.stroke();
-        }
+    if (mode === 'raw' || mode === 'pure') {
+        saveCanvas(outCanvas, `TownArt_${mode}_${w}x${h}.png`);
+        return;
     }
 
-    if (mode === 'label') {
-        // 3. 畫標號
+    // 2. 繪製網格與標號
+    if (mode === 'grid' || mode === 'label') {
         outCtx.textAlign = "center";
         outCtx.textBaseline = "middle";
-        outCtx.font = `bold ${Math.floor(upscale * 0.35)}px sans-serif`;
+        outCtx.font = `bold ${upscale * 0.4}px Arial`;
 
         for (let y = 0; y < h; y++) {
             for (let x = 0; x < w; x++) {
-                const i = (y * w + x) * 4;
-                const r = smallCanvasData.data[i], g = smallCanvasData.data[i+1], b = smallCanvasData.data[i+2];
-                const colorIdx = TOWN_PALETTE.findIndex(c => c.join(',') === `${r},${g},${b}`);
-                const label = getColorLabel(colorIdx);
+                const px = x * upscale;
+                const py = y * upscale;
 
-                if (label) {
-                    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-                    outCtx.fillStyle = brightness > 128 ? "rgba(0,0,0,0.8)" : "rgba(255,255,255,0.9)";
-                    outCtx.fillText(label, x * upscale + upscale/2, y * upscale + upscale/2);
+                // 畫框線
+                const isThickX = (x % 5 === 0);
+                const isThickY = ((h - y) % 5 === 0);
+                
+                outCtx.strokeStyle = "rgba(0,0,0,0.4)";
+                outCtx.lineWidth = 1;
+                outCtx.strokeRect(px, py, upscale, upscale);
+
+                // 如果是標號模式，寫上顏色編號
+                if (mode === 'label') {
+                    const idx = (y * w + x) * 4;
+                    const r = smallCanvasData.data[idx];
+                    const g = smallCanvasData.data[idx+1];
+                    const b = smallCanvasData.data[idx+2];
+                    
+                    // 找出該顏色在調色盤中的索引
+                    const colorIdx = TOWN_PALETTE.findIndex(c => c[0]===r && c[1]===g && c[2]===b);
+                    const label = getColorLabel(colorIdx);
+                    
+                    if (label) {
+                        // 簡單的文字陰影增加可讀性
+                        outCtx.fillStyle = (r+g+b < 380) ? "white" : "black";
+                        outCtx.fillText(label, px + upscale/2, py + upscale/2);
+                    }
                 }
+            }
+        }
+        
+        // 補強 5x5 粗線
+        outCtx.strokeStyle = "rgba(0,0,0,0.8)";
+        outCtx.lineWidth = 3;
+        for (let x = 0; x <= w; x += 5) {
+            outCtx.beginPath();
+            outCtx.moveTo(x * upscale, 0);
+            outCtx.lineTo(x * upscale, h * upscale);
+            outCtx.stroke();
+        }
+        for (let y = 0; y <= h; y++) {
+            if ((h - y) % 5 === 0) {
+                outCtx.beginPath();
+                outCtx.moveTo(0, y * upscale);
+                outCtx.lineTo(w * upscale, y * upscale);
+                outCtx.stroke();
             }
         }
     }
 
-    const link = document.createElement('a');
-    link.download = `TownArt_${mode}_${w}x${h}.png`;
-    link.href = outCanvas.toDataURL('image/png');
-    link.click();
+    saveCanvas(outCanvas, `TownArt_${mode}_${w}x${h}.png`);
+}
+// 新增缺失的下載執行函數
+function saveCanvas(canvas, filename) {
+    try {
+        const link = document.createElement('a');
+        link.download = filename;
+        // 使用 toDataURL 將畫布轉為圖片路徑
+        link.href = canvas.toDataURL('image/png');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch (err) {
+        console.error("保存圖片時出錯：", err);
+        alert("下載失敗，請嘗試更換瀏覽器或檢查圖片權限。");
+    }
 }
 </script>
 </body>
 </html>
-
