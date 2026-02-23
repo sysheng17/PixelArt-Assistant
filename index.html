@@ -618,16 +618,36 @@
 // 新增缺失的下載執行函數
 function saveCanvas(canvas, filename) {
     try {
+        // 1. 嘗試轉換成 DataURL
+        const dataUrl = canvas.toDataURL('image/png');
+        
+        // 2. 建立下載連結
         const link = document.createElement('a');
         link.download = filename;
-        // 使用 toDataURL 將畫布轉為圖片路徑
-        link.href = canvas.toDataURL('image/png');
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        link.href = dataUrl;
+        
+        // 針對 iOS/手機端的優化處理
+        if (navigator.userAgent.match(/(iPad|iPhone|iPod|Android)/g)) {
+            // 在手機端，有些瀏覽器不支援 link.click() 下載大圖
+            // 我們直接在新視窗打開這張圖片，讓使用者「長按儲存」
+            const newWindow = window.open();
+            if (newWindow) {
+                newWindow.document.write(`<img src="${dataUrl}" style="max-width:100%;">`);
+                newWindow.document.title = filename;
+                alert("手機版請長按圖片進行儲存\n(Please long-press to save image)");
+            } else {
+                // 如果被彈窗攔截，則嘗試原地跳轉
+                window.location.href = dataUrl;
+            }
+        } else {
+            // 電腦端維持正常下載
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
     } catch (err) {
         console.error("保存圖片時出錯：", err);
-        alert("下載失敗，請嘗試更換瀏覽器或檢查圖片權限。");
+        alert("圖片過大或瀏覽器限制，請嘗試截圖或更換 Chrome 瀏覽器。");
     }
 }
 </script>
