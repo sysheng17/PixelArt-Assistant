@@ -536,22 +536,29 @@
     function downloadImage(mode) {
     if (!smallCanvasData) return;
     const w = smallCanvasData.width, h = smallCanvasData.height;
-    const upscale = (mode === 'raw') ? 1 : 30; 
     
+    // --- 優化點 1：手機端點擊後立刻開啟空白分頁，避免繪圖太久被瀏覽器攔截彈窗 ---
+    let targetWin = null;
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+        targetWin = window.open('about:blank', '_blank');
+    }
+
+    const upscale = (mode === 'raw') ? 1 : 30; 
     const outCanvas = document.createElement('canvas');
     outCanvas.width = w * upscale; 
     outCanvas.height = h * upscale;
     const outCtx = outCanvas.getContext('2d');
     outCtx.imageSmoothingEnabled = false;
 
-    // 1. 繪製底圖
+    // 1. 繪製底圖 (保持原始邏輯，下載圖不強制白底)
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = w; tempCanvas.height = h;
     tempCanvas.getContext('2d').putImageData(smallCanvasData, 0, 0);
     outCtx.drawImage(tempCanvas, 0, 0, w, h, 0, 0, outCanvas.width, outCanvas.height);
 
     if (mode === 'raw' || mode === 'pure') {
-        saveCanvas(outCanvas, `TownArt_${mode}_${w}x${h}.png`);
+        saveCanvas(outCanvas, `TownArt_${mode}_${w}x${h}.png`, targetWin);
         return;
     }
 
@@ -567,9 +574,6 @@
                 const py = y * upscale;
 
                 // 畫框線
-                const isThickX = (x % 5 === 0);
-                const isThickY = ((h - y) % 5 === 0);
-                
                 outCtx.strokeStyle = "rgba(0,0,0,0.4)";
                 outCtx.lineWidth = 1;
                 outCtx.strokeRect(px, py, upscale, upscale);
@@ -581,12 +585,10 @@
                     const g = smallCanvasData.data[idx+1];
                     const b = smallCanvasData.data[idx+2];
                     
-                    // 找出該顏色在調色盤中的索引
                     const colorIdx = TOWN_PALETTE.findIndex(c => c[0]===r && c[1]===g && c[2]===b);
                     const label = getColorLabel(colorIdx);
                     
                     if (label) {
-                        // 簡單的文字陰影增加可讀性
                         outCtx.fillStyle = (r+g+b < 380) ? "white" : "black";
                         outCtx.fillText(label, px + upscale/2, py + upscale/2);
                     }
@@ -613,35 +615,47 @@
         }
     }
 
-    saveCanvas(outCanvas, `TownArt_${mode}_${w}x${h}.png`);
+    // 將產出的畫布交給 saveCanvas 處理
+    saveCanvas(outCanvas, `TownArt_${mode}_${w}x${h}.png`, targetWin);
 }
-function saveCanvas(canvas, filename) {
+
+function saveCanvas(canvas, filename, targetWin) {
+    // 使用 toBlob 提高大圖相容性
     canvas.toBlob((blob) => {
-        if (!blob) return;
+        if (!blob) {
+            if (targetWin) targetWin.close();
+            alert("圖片生成失敗 (Image generation failed)");
+            return;
+        }
+
         const url = URL.createObjectURL(blob);
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
         if (isMobile) {
-            // 優先嘗試新視窗開啟
-            const newWin = window.open(url, '_blank');
-            
-            // 保險機制：如果 window.open 被阻擋，則改用原地跳轉
-            // 這能確保在所有 Android/iOS 瀏覽器中圖片一定會出現
-            if (!newWin || newWin.closed || typeof newWin.closed === 'undefined') {
-                window.location.href = url; 
+            // 如果預開的分頁成功開啟，則導向圖片
+            if (targetWin && !targetWin.closed) {
+                targetWin.location.href = url;
+            } else {
+                // 如果被攔截，則嘗試原地跳轉
+                window.location.href = url;
             }
             
-            // 提醒使用者，增加操作成功率
-            alert("圖片已生成！\n請「長按圖片」選擇儲存。");
+            // 延遲提示，確保圖片載入
+            setTimeout(() => {
+                alert("圖片已生成！\n請「長按圖片」選擇儲存。\n若畫面空白，請嘗試在 Chrome 或 Safari 開啟本頁。");
+            }, 500);
             
-            // 延長回收時間，確保使用者儲存完畢
+            // 手機端保留 60 秒供長按儲存，之後釋放記憶體
             setTimeout(() => URL.revokeObjectURL(url), 60000);
         } else {
-            // 電腦端下載邏輯不變
+            // 電腦端下載
             const link = document.createElement('a');
             link.href = url;
             link.download = filename;
+            document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
+            // 下載後 1 秒即可回收記憶體
             setTimeout(() => URL.revokeObjectURL(url), 1000);
         }
     }, 'image/png');
@@ -649,4 +663,3 @@ function saveCanvas(canvas, filename) {
 </script>
 </body>
 </html>
-
