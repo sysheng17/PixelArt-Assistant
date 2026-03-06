@@ -106,6 +106,13 @@
                 <button onclick="setRatio(3/4)">3:4</button>
                 <button onclick="setRatio(9/16)">9:16</button>
             </div>
+			<div style="margin-top:10px; margin-bottom:15px; display:flex; gap:8px; justify-content:center; align-items:center; font-size:0.85rem;">
+			    <span>自訂比例：</span>
+			    <input type="number" id="customRatioW" placeholder="寬" style="width:55px; padding:5px; border:1px solid #cbd5e1; border-radius:4px;">
+			    <span>:</span>
+			    <input type="number" id="customRatioH" placeholder="高" style="width:55px; padding:5px; border:1px solid #cbd5e1; border-radius:4px;">
+			    <button onclick="applyCustomRatio()" style="background:var(--primary); color:white; padding:5px 12px;">設定</button>
+			</div>
             <button class="btn-primary" id="ui-confirm-crop" style="padding:10px 50px; border-radius:20px;" onclick="confirmCrop()">確認剪裁</button>
         </div>
     </div>
@@ -192,13 +199,17 @@
     const i18n = {
     zh: {
         title: "🎨 心動小鎮畫作助手",
+        step1_upload: "選擇圖片",
+        custom_ratio: "自訂比例：",
+        ratio_w: "寬",
+        ratio_h: "高",
+        set_btn: "設定",
         confirmCrop: "確認剪裁",
         hSize: "1. 常用尺寸",
         apply: "套用",
         limit: "⚠️ 已自動修正為原圖尺寸上限",
         maxHint: "* 原圖像素極限: ",
         grid: "顯示參考網格",
-        labelToggle: "顯示標號",
         hColor: "2. 色彩處理模式",
         townDirect: "小鎮 125色 (直接)",
         townDither: "小鎮 125色 (抖動)",
@@ -208,20 +219,27 @@
         hStep: "3. 逐色模式(選用) #例：7-3 是第7組第3個顏色",
         showAll: "顯示全部顏色",
         hExport: "4. 導出",
-	dlRaw: "🖼️ 下載當前尺寸 (1:1 像素)",
+        dlRaw: "🖼️ 下載當前尺寸 (1:1 像素)",
         dlPure: "💾 下載純淨像素圖",
         dlGrid: "📏 下載帶網格參考圖",
-        dlLabel: "🔢 下載標號網格參考圖"
+        dlLabel: "🔢 下載標號網格參考圖",
+        support: "☕ 支持我 (Support Me)",
+        feedback: "問題&建議回饋表單",
+        buyCoffee: "如果你覺得這個工具有幫助，可以請我喝杯咖啡！"
     },
     en: {
         title: "🎨 Town Art Assistant",
+        step1_upload: "Choose Image",
+        custom_ratio: "Custom Ratio:",
+        ratio_w: "W",
+        ratio_h: "H",
+        set_btn: "Set",
         confirmCrop: "Confirm Crop",
         hSize: "1. Common Sizes",
         apply: "Apply",
         limit: "⚠️ Limited to original image size",
         maxHint: "* Original Limit: ",
         grid: "Show Grid Lines",
-        labelToggle: "Show Labels", // 新增
         hColor: "2. Color Processing",
         townDirect: "Town 125 (Direct)",
         townDither: "Town 125 (Dither)",
@@ -231,45 +249,80 @@
         hStep: "3. Step-by-Step Mode #e.g., 7-3 is Group 7, 3rd color.",
         showAll: "Show All Colors",
         hExport: "4. Export",
-	dlRaw: "🖼️ Download Raw (1:1 Pixel)",
+        dlRaw: "🖼️ Download Raw (1:1 Pixel)",
         dlPure: "💾 Download Pixel Art",
         dlGrid: "📏 Download with Grid",
-        dlLabel: "🔢 Download with Labels"
+        dlLabel: "🔢 Download with Labels",
+        support: "☕ Support Me",
+        feedback: "Feedback & Suggestions Form",
+        buyCoffee: "If you find this tool helpful, feel free to buy me a coffee!"
     }
 };
 
-    let currentLang = 'zh';
-    let targetColor = null;
-
-    function switchLang(lang, e) {
+function switchLang(lang, e) {
     currentLang = lang;
-    document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
-    if(e) e.target.classList.add('active');
     
+    // 更新按鈕 active 樣式
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('onclick').includes(`'${lang}'`));
+    });
+
     const t = i18n[lang];
-    // 基礎 UI 翻譯
-    document.getElementById('ui-title').innerText = t.title;
-    document.getElementById('ui-confirm-crop').innerText = t.confirmCrop;
-    document.getElementById('ui-h-size').innerText = t.hSize;
-    document.getElementById('ui-apply-btn').innerText = t.apply;
-    document.getElementById('ui-grid-label').innerText = t.grid;
-    document.getElementById('ui-h-color').innerText = t.hColor;
-    document.getElementById('ui-town-direct').innerText = t.townDirect;
-    document.getElementById('ui-town-dither').innerText = t.townDither;
-    document.getElementById('ui-256').innerText = t.c256;
-    document.getElementById('ui-16').innerText = t.c16;
-    document.getElementById('ui-reset-btn').innerText = t.reset;
-    document.getElementById('ui-h-step').innerText = t.hStep;
-    document.getElementById('ui-show-all').innerText = t.showAll;
-    document.getElementById('ui-h-export').innerText = t.hExport;
     
-    // 修正：這裡改為抓取所有下載按鈕進行翻譯
+    // 1. 批量更新 ID 內容
+    const uiMap = {
+        'ui-title': t.title,
+        'ui-confirm-crop': t.confirmCrop,
+        'ui-h-size': t.hSize,
+        'ui-apply-btn': t.apply,
+        'ui-grid-label': t.grid,
+        'ui-h-color': t.hColor,
+        'ui-town-direct': t.townDirect,
+        'ui-town-dither': t.townDither,
+        'ui-256': t.c256,
+        'ui-16': t.c16,
+        'ui-reset-btn': t.reset,
+        'ui-h-step': t.hStep,
+        'ui-show-all': t.showAll,
+        'ui-h-export': t.hExport
+    };
+
+    for (let id in uiMap) {
+        const el = document.getElementById(id);
+        if (el) el.innerText = uiMap[id];
+    }
+
+    // 2. 更新特殊文字標籤與 Placeholder
+    // 更新自訂比例標籤 (使用 querySelector 找 span)
+    const ratioSpan = document.querySelector('#cropControls div span:first-child');
+    if (ratioSpan) ratioSpan.innerText = t.custom_ratio;
+    
+    document.getElementById('customRatioW').placeholder = t.ratio_w;
+    document.getElementById('customRatioH').placeholder = t.ratio_h;
+    
+    // 更新設定按鈕
+    const setBtn = document.querySelector('button[onclick="applyCustomRatio()"]');
+    if (setBtn) setBtn.innerText = t.set_btn;
+
+    // 3. 更新下載按鈕文字
     const exportBtns = document.querySelectorAll('.btn-success');
-    if (exportBtns.length >= 4) {
-        exportBtns[0].innerText = t.dlRaw;
-        exportBtns[1].innerText = t.dlPure;
-        exportBtns[2].innerText = t.dlGrid;
-        exportBtns[3].innerText = t.dlLabel;
+    const dlKeys = ['dlRaw', 'dlPure', 'dlGrid', 'dlLabel'];
+    exportBtns.forEach((btn, index) => {
+        if (dlKeys[index]) btn.innerText = t[dlKeys[index]];
+    });
+
+    // 4. 更新底部支持資訊
+    const supportBox = document.querySelector('div[style*="background: #fffaf0"]');
+    if (supportBox) {
+        supportBox.querySelector('strong').innerText = t.support;
+        const feedbackLink = supportBox.querySelector('a[href*="forms.gle"]');
+        if (feedbackLink) feedbackLink.innerText = t.feedback;
+        
+        // 針對 P 標籤內的純文字進行替換，不影響 a 連結
+        const pTag = supportBox.querySelector('p');
+        if (pTag && pTag.childNodes.length > 2) {
+            pTag.childNodes[2].textContent = `\n${t.buyCoffee}\n`;
+        }
     }
 
     if (croppedCanvas) {
@@ -400,7 +453,7 @@
         };
         list.appendChild(btn);
     });
-}
+	}
 
     function filterColor(col) {
         targetColor = col;
@@ -463,6 +516,16 @@
         data[i] += er * wt; data[i+1] += eg * wt; data[i+2] += eb * wt;
     }
 
+    function applyCustomRatio() {
+    	const rw = parseFloat(document.getElementById('customRatioW').value);
+    	const rh = parseFloat(document.getElementById('customRatioH').value);
+    
+    	if (rw > 0 && rh > 0) {
+        	cropper.setAspectRatio(rw / rh);
+    	} else {
+        	alert(currentLang === 'zh' ? "請輸入有效的寬高比例數字" : "Please enter valid numbers for the ratio.");
+    	}
+	}
     function render() {
     if (!smallCanvasData) return;
     const w = smallCanvasData.width, h = smallCanvasData.height;
